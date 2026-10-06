@@ -15,9 +15,11 @@
     "test": "npm --prefix server test",
     "test:coverage": "npm --prefix server run test:coverage",
     "lint": "npm --prefix server run lint",
-    "postinstall": "npm --prefix server install && npm --prefix client install"
+    "postinstall": "npm --prefix server install && npm --prefix client install",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "concurrently": "9.1.0"
   },
   "engines": {
