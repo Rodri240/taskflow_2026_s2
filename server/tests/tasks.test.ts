@@ -96,6 +96,8 @@ describe('Tareas', () => {
       description: 'Descripción',
       priority: 'CRITICAL',
       assigneeId: assignee.id,
+      // Tolera BUG-18 (desfase horario): la fecha exacta se verifica en
+      // unit-dates.test.ts con una zona horaria fija.
       dueDate: expect.stringMatching(/^2030-05-/),
     });
   });
@@ -436,5 +438,244 @@ describe('Tareas', () => {
 
     expect(same.status).toBe(200);
     expect(moved.status).toBe(200);
+  });
+
+  it('un usuario que no es miembro no puede crear tareas (US-05 CA5)', async () => {
+    const owner = await registerUser(`us05-owner-${Date.now()}@test.com`);
+    const outsider = await registerUser(`us05-out-${Date.now()}@test.com`);
+    const project = await createProject(owner.token, 'Proyecto US-05');
+
+    const res = await request(app)
+      .post(`/api/projects/${project.id}/tasks`)
+      .set(auth(outsider.token))
+      .send({ title: 'Tarea invasora' });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe('FORBIDDEN');
+  });
+
+  it('permite la transición IN_PROGRESS a TODO (US-06 CA1)', async () => {
+    const { token } = await registerUser(`us06-rev-${Date.now()}@test.com`);
+    const project = await createProject(token, 'Proyecto US-06 reversa');
+    const task = await createTask(token, project.id, { title: 'Tarea reversible' });
+
+    await request(app)
+      .patch(`/api/tasks/${task.id}`)
+      .set(auth(token))
+      .send({ status: 'IN_PROGRESS' });
+    const res = await request(app)
+      .patch(`/api/tasks/${task.id}`)
+      .set(auth(token))
+      .send({ status: 'TODO' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('TODO');
+  });
+
+  // BUG-22: la búsqueda usa instr() sobre SQL crudo, que distingue
+  // mayúsculas; US-07 CA4 pide buscar sin distinguir mayúsculas.
+  it('la búsqueda por texto no distingue mayúsculas (US-07 CA4)', async () => {
+    const { token } = await registerUser(`us07-case-${Date.now()}@test.com`);
+    const project = await createProject(token, 'Proyecto búsqueda case');
+    await createTask(token, project.id, { title: 'Implementar Login' });
+
+    const res = await request(app)
+      .get(`/api/projects/${project.id}/tasks`)
+      .query({ search: 'login' })
+      .set(auth(token));
+
+    expect(res.status).toBe(200);
+    expect(res.body.items).toHaveLength(1);
+  });
+
+  it('reporta limit por defecto 20 y acepta un limit máximo de 100 (US-07 CA7)', async () => {
+    const { token } = await registerUser(`us07-limit-${Date.now()}@test.com`);
+    const project = await createProject(token, 'Proyecto límites');
+    await createTask(token, project.id, { title: 'Tarea con límites' });
+
+    const res = await request(app)
+      .get(`/api/projects/${project.id}/tasks`)
+      .set(auth(token));
+    const clamped = await request(app)
+      .get(`/api/projects/${project.id}/tasks`)
+      .query({ limit: 150 })
+      .set(auth(token));
+
+    expect(res.status).toBe(200);
+    expect(res.body.limit).toBe(20);
+    expect(clamped.body.limit).toBe(100);
+  });
+
+  // BUG-23: el controlador calcula limit/offset pero devuelve todas las
+  // filas; US-07 CA7 exige paginar (20 por defecto).
+  it('devuelve como máximo 20 tareas por página (US-07 CA7)', async () => {
+    const { token } = await registerUser(`us07-page-${Date.now()}@test.com`);
+    const project = await createProject(token, 'Proyecto paginación');
+    for (let index = 0; index < 21; index += 1) {
+      await createTask(token, project.id, { title: `Tarea paginada ${index}` });
+    }
+
+    const res = await request(app)
+      .get(`/api/projects/${project.id}/tasks`)
+      .set(auth(token));
+
+    expect(res.status).toBe(200);
+    expect(res.body.total).toBe(21);
+    expect(res.body.items).toHaveLength(20);
+  });
+
+  it('rechaza una prioridad inválida al editar la tarea (US-12 CA3)', async () => {
+    const { token } = await registerUser(`us12-ca3-${Date.now()}@test.com`);
+    const project = await createProject(token, 'Proyecto US-12');
+    const task = await createTask(token, project.id, { title: 'Tarea a editar' });
+
+    const res = await request(app)
+      .patch(`/api/tasks/${task.id}`)
+      .set(auth(token))
+      .send({ priority: 'URGENTE' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  // BUG-14: PATCH /tasks/:id no verifica membresía para campos distintos del
+  // estado; US-12 CA5 exige 403 para un usuario ajeno al proyecto.
+  it('un usuario ajeno no puede editar el título de la tarea (US-12 CA5)', async () => {
+    const owner = await registerUser(`us12-ca5-owner-${Date.now()}@test.com`);
+    const outsider = await registerUser(`us12-ca5-out-${Date.now()}@test.com`);
+    const project = await createProject(owner.token, 'Proyecto US-12 CA5');
+    const task = await createTask(owner.token, project.id, { title: 'Tarea protegida' });
+
+    const res = await request(app)
+      .patch(`/api/tasks/${task.id}`)
+      .set(auth(outsider.token))
+      .send({ title: 'Título tomado' });
+
+    expect(res.status).toBe(403);
+  });
+
+  it('permite eliminar una tarea en estado DONE (US-13 CA5)', async () => {
+    const { token } = await registerUser(`us13-ca5-${Date.now()}@test.com`);
+    const project = await createProject(token, 'Proyecto US-13');
+    const task = await createTask(token, project.id, { title: 'Tarea terminada' });
+
+    await request(app)
+      .patch(`/api/tasks/${task.id}`)
+      .set(auth(token))
+      .send({ status: 'IN_PROGRESS' });
+    await request(app)
+      .patch(`/api/tasks/${task.id}`)
+      .set(auth(token))
+      .send({ status: 'DONE' });
+
+    const res = await request(app).delete(`/api/tasks/${task.id}`).set(auth(token));
+
+    expect(res.status).toBe(204);
+    const after = await request(app).get(`/api/tasks/${task.id}`).set(auth(token));
+    expect(after.status).toBe(404);
+  });
+
+  it('al eliminar una tarea se eliminan sus comentarios (US-13 CA2)', async () => {
+    const { token } = await registerUser(`us13-ca2-${Date.now()}@test.com`);
+    const project = await createProject(token, 'Proyecto US-13 cascada');
+    const task = await createTask(token, project.id, { title: 'Tarea con historial' });
+    const comment = await request(app)
+      .post(`/api/tasks/${task.id}/comments`)
+      .set(auth(token))
+      .send({ body: 'Comentario huérfano' });
+
+    const res = await request(app).delete(`/api/tasks/${task.id}`).set(auth(token));
+
+    expect(res.status).toBe(204);
+    const orphan = await request(app)
+      .delete(`/api/comments/${comment.body.id}`)
+      .set(auth(token));
+    expect(orphan.status).toBe(404);
+  });
+
+  it('un miembro no-owner puede asignar la tarea sin cambiar su estado (US-14 CA4/CA5)', async () => {
+    const owner = await registerUser(`us14-owner-${Date.now()}@test.com`);
+    const memberEmail = `us14-member-${Date.now()}@test.com`;
+    const member = await registerUser(memberEmail);
+    const project = await createProject(owner.token, 'Proyecto US-14');
+    await request(app)
+      .post(`/api/projects/${project.id}/members`)
+      .set(auth(owner.token))
+      .send({ email: memberEmail });
+    const task = await createTask(owner.token, project.id, { title: 'Tarea a distribuir' });
+
+    const res = await request(app)
+      .patch(`/api/tasks/${task.id}`)
+      .set(auth(member.token))
+      .send({ assigneeId: member.id });
+
+    expect(res.status).toBe(200);
+    expect(res.body.assigneeId).toBe(member.id);
+    expect(res.body.status).toBe('TODO');
+  });
+
+  it('un usuario que no es miembro no puede etiquetar tareas (US-15 CA7)', async () => {
+    const owner = await registerUser(`us15-owner-${Date.now()}@test.com`);
+    const outsider = await registerUser(`us15-out-${Date.now()}@test.com`);
+    const project = await createProject(owner.token, 'Proyecto US-15');
+    const task = await createTask(owner.token, project.id, { title: 'Tarea etiquetada' });
+
+    const res = await request(app)
+      .post(`/api/tasks/${task.id}/tags`)
+      .set(auth(outsider.token))
+      .send({ name: 'intruso' });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe('FORBIDDEN');
+  });
+
+  it('admite cargar una fecha de vencimiento pasada (US-16 CA7)', async () => {
+    const { token } = await registerUser(`us16-ca7-${Date.now()}@test.com`);
+    const project = await createProject(token, 'Proyecto US-16');
+    const task = await createTask(token, project.id, { title: 'Tarea vencida' });
+
+    const res = await request(app)
+      .patch(`/api/tasks/${task.id}`)
+      .set(auth(token))
+      .send({ dueDate: '2020-01-01' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.dueDate).toBe('2020-01-01');
+  });
+
+  // BUG-14: PATCH /tasks/:id no verifica membresía para campos distintos del
+  // estado; US-16 CA8 exige 403 para un usuario ajeno al proyecto.
+  it('un usuario ajeno no puede modificar la fecha de vencimiento (US-16 CA8)', async () => {
+    const owner = await registerUser(`us16-ca8-owner-${Date.now()}@test.com`);
+    const outsider = await registerUser(`us16-ca8-out-${Date.now()}@test.com`);
+    const project = await createProject(owner.token, 'Proyecto US-16 CA8');
+    const task = await createTask(owner.token, project.id, { title: 'Tarea fecha protegida' });
+
+    const res = await request(app)
+      .patch(`/api/tasks/${task.id}`)
+      .set(auth(outsider.token))
+      .send({ dueDate: '2031-01-01' });
+
+    expect(res.status).toBe(403);
+  });
+
+  // BUG-21: la búsqueda interpola el término en SQL crudo
+  // ($queryRawUnsafe en tasks.repository.ts); una comilla rompe la consulta
+  // y el texto del usuario podría inyectarse. Seguridad 1 de la
+  // especificación: toda entrada se trata como dato, nunca se concatena al SQL.
+  it('la búsqueda por texto tolera comillas y no rompe el SQL (Seguridad 1)', async () => {
+    const { token } = await registerUser(`sqli-${Date.now()}@test.com`);
+    const project = await createProject(token, 'Proyecto SQLi');
+    await createTask(token, project.id, { title: "Buscar 'esta' tarea" });
+    await createTask(token, project.id, { title: 'Otra tarea' });
+
+    const res = await request(app)
+      .get(`/api/projects/${project.id}/tasks`)
+      .query({ search: "'" })
+      .set(auth(token));
+
+    expect(res.status).toBe(200);
+    expect(res.body.items).toHaveLength(1);
+    expect(res.body.items[0].title).toContain("'");
   });
 });

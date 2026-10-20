@@ -418,4 +418,29 @@ describe('Proyectos', () => {
 
     expect(res.status).toBe(404);
   });
+
+  it('devuelve un array vacío para un usuario sin proyectos (US-04 CA4)', async () => {
+    const { token } = await registerUser(`us04-ca4-${Date.now()}@test.com`);
+
+    const res = await request(app).get('/api/projects').set(auth(token));
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([]);
+  });
+
+  it('incluye id, nombre, descripción y fecha de creación en el listado (US-04 CA3)', async () => {
+    const { token } = await registerUser(`us04-ca3-${Date.now()}@test.com`);
+    await createProject(token, 'Proyecto con campos');
+
+    const res = await request(app).get('/api/projects').set(auth(token));
+
+    expect(res.status).toBe(200);
+    const [project] = res.body;
+    expect(project).toMatchObject({
+      id: expect.stringMatching(/^proj-\d+$/),
+      name: 'Proyecto con campos',
+      description: null,
+      createdAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+    });
+  });
 });

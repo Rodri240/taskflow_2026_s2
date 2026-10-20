@@ -1,6 +1,29 @@
 import { expect, test } from '../fixtures';
+import type { ApiClient, AuthSession } from '../fixtures';
 import { AppActions } from '../actions/app';
-import { PROJECTS, USERS, uniqueName } from '../support/data';
+import { USERS, uniqueName } from '../support/data';
+
+async function setupFilterBoard(api: ApiClient, auth: AuthSession) {
+  const bob = await api.login(USERS.bob.email, USERS.bob.password);
+  const project = await api.createProject(auth.token, { name: uniqueName('Filtros') });
+  await api.addMember(auth.token, project.id, USERS.bob.email);
+  await api.createTask(auth.token, project.id, {
+    title: 'Implementar login',
+    priority: 'HIGH',
+    assigneeId: bob.user.id,
+  });
+  await api.createTask(auth.token, project.id, {
+    title: 'Configurar dominio',
+    priority: 'LOW',
+    assigneeId: bob.user.id,
+  });
+  await api.createTask(auth.token, project.id, {
+    title: 'Revisar diseño',
+    priority: 'HIGH',
+    assigneeId: auth.user.id,
+  });
+  return project;
+}
 
 test.describe('Tablero', () => {
   test('crea una tarea y aparece en la columna TODO', async ({ page, session }) => {
@@ -47,56 +70,62 @@ test.describe('Tablero', () => {
     expect(res.status()).toBe(422);
   });
 
-  test('filtra las tareas por prioridad', async ({ page }) => {
-    const app = new AppActions(page);
-    await app.loginAs(USERS.ana);
-    await app.openBoard(PROJECTS.site);
+  test('filtra las tareas por prioridad', async ({ page, api, session }) => {
+    const auth = await session(USERS.ana);
+    const project = await setupFilterBoard(api, auth);
 
+    const app = new AppActions(page);
+    await app.board.goto(project.id);
     await app.filterTasks({ priority: 'HIGH' });
 
     await expect(app.board.total).toHaveText('Total: 2');
   });
 
-  test('filtra las tareas por asignado', async ({ page }) => {
-    const app = new AppActions(page);
-    await app.loginAs(USERS.ana);
-    await app.openBoard(PROJECTS.site);
+  test('filtra las tareas por asignado', async ({ page, api, session }) => {
+    const auth = await session(USERS.ana);
+    const project = await setupFilterBoard(api, auth);
 
+    const app = new AppActions(page);
+    await app.board.goto(project.id);
     await app.filterTasks({ assignedTo: USERS.bob.email });
 
     await expect(app.board.total).toHaveText('Total: 2');
   });
 
-  test('busca tareas por texto', async ({ page }) => {
-    const app = new AppActions(page);
-    await app.loginAs(USERS.ana);
-    await app.openBoard(PROJECTS.site);
+  test('busca tareas por texto', async ({ page, api, session }) => {
+    const auth = await session(USERS.ana);
+    const project = await setupFilterBoard(api, auth);
 
+    const app = new AppActions(page);
+    await app.board.goto(project.id);
     await app.filterTasks({ search: 'dominio' });
 
     await expect(app.board.total).toHaveText('Total: 1');
   });
 
   // BUG-02: los filtros se pisan entre sí; solo se aplica el último (asignado).
-  // Con prioridad HIGH + asignado bob debería quedar 1 tarea ("Ajustar accesibilidad").
-  test('combina el filtro de prioridad y de asignado', async ({ page }) => {
-    const app = new AppActions(page);
-    await app.loginAs(USERS.ana);
-    await app.openBoard(PROJECTS.site);
+  // Con prioridad HIGH + asignado bob debería quedar 1 tarea ("Implementar login").
+  test('combina el filtro de prioridad y de asignado', async ({ page, api, session }) => {
+    const auth = await session(USERS.ana);
+    const project = await setupFilterBoard(api, auth);
 
+    const app = new AppActions(page);
+    await app.board.goto(project.id);
     await app.filterTasks({ priority: 'HIGH', assignedTo: USERS.bob.email });
 
     await expect(app.board.total).toHaveText('Total: 1');
   });
 
   // BUG-03: la búsqueda por texto ignora el resto de los filtros.
-  // Con prioridad HIGH + "diseño" no debería devolver tareas (esa tarea es MEDIUM).
-  test('combina la búsqueda con el filtro de prioridad', async ({ page }) => {
-    const app = new AppActions(page);
-    await app.loginAs(USERS.ana);
-    await app.openBoard(PROJECTS.site);
+  // Con prioridad HIGH + "dominio" no debería devolver tareas ("Configurar
+  // dominio" es LOW).
+  test('combina la búsqueda con el filtro de prioridad', async ({ page, api, session }) => {
+    const auth = await session(USERS.ana);
+    const project = await setupFilterBoard(api, auth);
 
-    await app.filterTasks({ priority: 'HIGH', search: 'diseño' });
+    const app = new AppActions(page);
+    await app.board.goto(project.id);
+    await app.filterTasks({ priority: 'HIGH', search: 'dominio' });
 
     await expect(app.board.total).toHaveText('Total: 0');
   });
