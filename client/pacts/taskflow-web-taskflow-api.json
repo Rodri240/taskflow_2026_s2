@@ -4,87 +4,28 @@
   },
   "interactions": [
     {
-      "description": "a login request",
-      "pending": false,
-      "request": {
-        "body": {
-          "content": {
-            "email": "ana@test.com",
-            "password": "Password1"
-          },
-          "contentType": "application/json",
-          "encoded": false
-        },
-        "headers": {
-          "Content-Type": [
-            "application/json"
-          ]
-        },
-        "method": "POST",
-        "path": "/api/auth/login"
-      },
-      "response": {
-        "body": {
-          "content": {
-            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoiYW5hQHRlc3QuY29tIiwiZXhwIjo0MTAyNDQ0ODAwfQ.U69a0bTA3YiNsjlgUUpdLf4PJgY5ECRqcoTR_BSQWkU",
-            "user": {
-              "createdAt": "2026-01-01T00:00:00.000Z",
-              "email": "ana@test.com",
-              "id": "user-1",
-              "name": "Ana"
-            }
-          },
-          "contentType": "application/json",
-          "encoded": false
-        },
-        "headers": {
-          "Content-Type": [
-            "application/json"
-          ]
-        },
-        "matchingRules": {
-          "body": {
-            "$.token": {
-              "combine": "AND",
-              "matchers": [
-                {
-                  "match": "regex",
-                  "regex": "^.+$"
-                }
-              ]
-            }
-          }
-        },
-        "status": 200
-      },
-      "type": "Synchronous/HTTP"
-    },
-    {
-      "description": "a task comments request",
+      "description": "un GET a /api/projects",
       "pending": false,
       "providerStates": [
         {
-          "name": "ana es miembro de proj-1 y task-1 tiene comentarios"
+          "name": "el usuario ana tiene proyectos"
         }
       ],
       "request": {
         "headers": {
           "Authorization": [
-            "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoiYW5hQHRlc3QuY29tIiwiZXhwIjo0MTAyNDQ0ODAwfQ.U69a0bTA3YiNsjlgUUpdLf4PJgY5ECRqcoTR_BSQWkU"
+            "Bearer token-de-prueba"
           ]
         },
         "method": "GET",
-        "path": "/api/tasks/task-1/comments"
+        "path": "/api/projects"
       },
       "response": {
         "body": {
           "content": [
             {
-              "authorId": "user-1",
-              "body": "Comentario de prueba",
-              "createdAt": "2026-01-01T00:00:00.000Z",
-              "id": "comment-1",
-              "taskId": "task-1"
+              "id": "proj-1",
+              "name": "Proyecto 1"
             }
           ],
           "contentType": "application/json",

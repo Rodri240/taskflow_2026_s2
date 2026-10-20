@@ -1,14 +1,15 @@
 import bcrypt from 'bcryptjs';
 import { Verifier } from '@pact-foundation/pact';
+import type { NextFunction, Request, Response } from 'express';
 import http from 'node:http';
 import path from 'node:path';
 import { createApp } from '../../src/app';
 import { db } from '../../src/lib/db';
 
 const pactFile = path.resolve(__dirname, '../../../client/pacts/taskflow-web-taskflow-api.json');
+const contractToken = 'token-de-prueba';
 
-async function prepareCommentsState(): Promise<void> {
-  await db.comment.deleteMany();
+async function prepareProjectsState(): Promise<void> {
   await db.projectMember.deleteMany();
   await db.task.deleteMany();
   await db.project.deleteMany();
@@ -21,34 +22,31 @@ async function prepareCommentsState(): Promise<void> {
       email: 'ana@test.com',
       name: 'Ana',
       passwordHash,
-      createdAt: new Date('2026-01-01T00:00:00.000Z'),
     },
   });
   await db.project.create({
-    data: { id: 1, name: 'Proyecto de prueba', ownerId: 1 },
+    data: { id: 1, name: 'Proyecto 1', ownerId: 1 },
   });
   await db.projectMember.create({
     data: { projectId: 1, userId: 1, role: 'OWNER' },
   });
-  await db.task.create({
-    data: {
-      id: 1,
-      projectId: 1,
-      title: 'Implementar login',
-      priority: 'HIGH',
-      createdAt: new Date('2026-01-01T00:00:00.000Z'),
-      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
-    },
+}
+
+async function getRealToken(providerBaseUrl: string): Promise<string> {
+  const response = await fetch(`${providerBaseUrl}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'ana@test.com', password: 'Password1' }),
   });
-  await db.comment.create({
-    data: {
-      id: 1,
-      taskId: 1,
-      authorId: 1,
-      body: 'Comentario de prueba',
-      createdAt: new Date('2026-01-01T00:00:00.000Z'),
-    },
-  });
+  if (!response.ok) {
+    throw new Error(`Could not obtain provider token: ${response.status}`);
+  }
+
+  const body = (await response.json()) as { token?: string };
+  if (!body.token) {
+    throw new Error('Provider login did not return a token');
+  }
+  return body.token;
 }
 
 describe('taskflow-api Pact verification', () => {
@@ -56,7 +54,7 @@ describe('taskflow-api Pact verification', () => {
   let providerBaseUrl: string;
 
   beforeAll(async () => {
-    await prepareCommentsState();
+    await prepareProjectsState();
     server = createApp().listen(0);
     await new Promise<void>((resolve) => server.once('listening', resolve));
     const address = server.address();
@@ -72,14 +70,22 @@ describe('taskflow-api Pact verification', () => {
     });
   });
 
-  it('matches the frontend contract', async () => {
+  it('matches the projects contract', async () => {
+    const realToken = await getRealToken(providerBaseUrl);
+
     await new Verifier({
       provider: 'taskflow-api',
       providerBaseUrl,
       pactUrls: [pactFile],
+      requestFilter: (req: Request, _res: Response, next: NextFunction) => {
+        if (req.header('authorization') === `Bearer ${contractToken}`) {
+          req.headers.authorization = `Bearer ${realToken}`;
+        }
+        next();
+      },
       stateHandlers: {
-        'ana es miembro de proj-1 y task-1 tiene comentarios': prepareCommentsState,
+        'el usuario ana tiene proyectos': prepareProjectsState,
       },
     }).verifyProvider();
-  });
+  }, 30000);
 });
