@@ -19,14 +19,20 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:report": "playwright show-report",
     "e2e:server": "node e2e/start-api.mjs",
+    "contract:db:setup": "cd server && RUST_LOG=info DATABASE_URL='file:./taskflow_test.db' npx prisma db push --skip-generate --accept-data-loss && RUST_LOG=info DATABASE_URL='file:./taskflow_test.db' npm run db:seed",
+    "contract:provider:start": "cd server && PORT=3001 DATABASE_URL='file:./taskflow_test.db' JWT_SECRET='taskflow-contract-test-secret' TZ='America/Montevideo' RUST_LOG=info npm run dev",
+    "test:contract:consumer": "vitest run contract-tests/consumer",
+    "test:contract:provider": "vitest run contract-tests/provider",
     "lint": "npm --prefix server run lint",
     "postinstall": "npm --prefix server install && npm --prefix client install"
   },
   "devDependencies": {
+    "@pact-foundation/pact": "^17.1.4",
     "@playwright/test": "^1.64.1",
     "@types/node": "20.19.9",
     "concurrently": "9.1.0",
-    "typescript": "5.6.3"
+    "typescript": "5.6.3",
+    "vitest": "^2.1.9"
   },
   "engines": {
     "node": ">=20"

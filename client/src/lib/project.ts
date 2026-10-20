@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { api, ApiError } from './api';
+import { getProjects } from '../api/projects';
+import { ApiError } from './api';
 import type { Project } from '../types';
 
 interface ProjectState {
@@ -19,7 +20,7 @@ export function useProject(projectId: string | undefined): ProjectState {
     setLoading(true);
     setError(null);
     try {
-      const projects = await api<Project[]>('/projects');
+      const projects = await getProjects();
       const found = projects.find((p) => p.id === projectId) ?? null;
       setProject(found);
       if (!found) setError('No se encontró el proyecto');
