@@ -1,0 +1,188 @@
+# npm audit report
+
+body-parser  <=1.20.8 || 2.0.0-beta.1 - 2.3.0
+Severity: high
+body-parser vulnerable to denial of service when invalid limit value silently disables size enforcement - https://github.com/advisories/GHSA-v422-hmwv-36x6
+body-parser vulnerable to Denial of Service via trailing bytes after a compressed request body - https://github.com/advisories/GHSA-27r3-jxmh-p828
+body-parser vulnerable to Denial of Service via trailing bytes after a compressed request body - https://github.com/advisories/GHSA-27r3-jxmh-p828
+Depends on vulnerable versions of qs
+fix available via `npm audit fix --force`
+Will install express@4.22.3, which is outside the stated dependency range
+node_modules/@pact-foundation/pact/node_modules/body-parser
+node_modules/body-parser
+  express  4.0.0-rc1 - 4.22.2 || 5.0.0-alpha.1 - 5.0.1
+  Depends on vulnerable versions of body-parser
+  Depends on vulnerable versions of path-to-regexp
+  Depends on vulnerable versions of qs
+  node_modules/express
+
+brace-expansion  <=1.1.20 || 2.0.0 - 2.1.6
+Severity: high
+brace-expansion: Quadratic-time expansion of the `{a},b}` rewrite causes CPU denial of service - https://github.com/advisories/GHSA-q2hr-2g5m-vwhr
+brace-expansion: Quadratic-time expansion of the `{a},b}` rewrite causes CPU denial of service - https://github.com/advisories/GHSA-q2hr-2g5m-vwhr
+brace-expansion: DoS via uncontrolled recursion on nested brace groups causing stack exhaustion - https://github.com/advisories/GHSA-qhr7-859c-m2p7
+brace-expansion: DoS via uncontrolled recursion on nested brace groups causing stack exhaustion - https://github.com/advisories/GHSA-qhr7-859c-m2p7
+brace-expansion: DoS via uncontrolled recursion in parseCommaParts causing stack exhaustion - https://github.com/advisories/GHSA-6j4f-fj2g-mc7p
+brace-expansion: DoS via uncontrolled recursion in parseCommaParts causing stack exhaustion - https://github.com/advisories/GHSA-6j4f-fj2g-mc7p
+fix available via `npm audit fix`
+node_modules/brace-expansion
+node_modules/filelist/node_modules/brace-expansion
+
+deepmerge  >=4.2.0
+deepmerge mergeObject() allows prototype poisoning of returned objects - https://github.com/advisories/GHSA-gcqx-w48m-w2h4
+fix available via `npm audit fix --force`
+Will install jest@25.1.0, which is a breaking change
+node_modules/deepmerge
+  jest-config  >=19.1.0-alpha.eed82034
+  Depends on vulnerable versions of babel-jest
+  Depends on vulnerable versions of deepmerge
+  Depends on vulnerable versions of glob
+  Depends on vulnerable versions of jest-circus
+  Depends on vulnerable versions of jest-runner
+  node_modules/jest-config
+    @jest/core  *
+    Depends on vulnerable versions of @jest/reporters
+    Depends on vulnerable versions of @jest/transform
+    Depends on vulnerable versions of jest-config
+    Depends on vulnerable versions of jest-resolve-dependencies
+    Depends on vulnerable versions of jest-runner
+    Depends on vulnerable versions of jest-runtime
+    Depends on vulnerable versions of jest-snapshot
+    node_modules/@jest/core
+      jest  >=25.2.0-alpha.86
+      Depends on vulnerable versions of @jest/core
+      Depends on vulnerable versions of jest-cli
+      node_modules/jest
+        ts-jest  >=25.10.0-alpha.1
+        Depends on vulnerable versions of @jest/transform
+        Depends on vulnerable versions of babel-jest
+        Depends on vulnerable versions of ejs
+        Depends on vulnerable versions of jest
+        node_modules/ts-jest
+    create-jest  >=29.7.0
+    Depends on vulnerable versions of jest-config
+    node_modules/create-jest
+      jest-cli  >=25.2.0-alpha.86
+      Depends on vulnerable versions of @jest/core
+      Depends on vulnerable versions of create-jest
+      Depends on vulnerable versions of jest-config
+      node_modules/jest-cli
+
+deepmerge-ts  <8.0.0
+Severity: high
+DeepmergeTS has stack exhaustion when merging recursive object graphs - https://github.com/advisories/GHSA-ggr8-5vv4-36mx
+fix available via `npm audit fix --force`
+Will install prisma@7.10.1, which is a breaking change
+node_modules/deepmerge-ts
+  @prisma/config  6.13.0-dev.1 - 7.10.0 || 8.1.0-dev.1 - 8.1.0-dev.4
+  Depends on vulnerable versions of deepmerge-ts
+  node_modules/@prisma/config
+    prisma  6.13.0-dev.1 - 7.10.0 || 8.0.0-rc.3 - 8.1.0-dev.4
+    Depends on vulnerable versions of @prisma/config
+    node_modules/prisma
+
+follow-redirects  1.16.0 - 1.16.1
+Severity: high
+follow-redirects: Cross-realm sensitiveHeaders arrays are discarded and custom credentials can follow redirects - https://github.com/advisories/GHSA-mrwp-f3q8-3g9p
+fix available via `npm audit fix`
+node_modules/follow-redirects
+
+minimatch  <11.0.1
+Severity: moderate
+minimatch has potential denial of service via globparts amplification - https://github.com/advisories/GHSA-g3hv-75wg-m249
+fix available via `npm audit fix --force`
+Will install ts-jest@25.5.1, which is a breaking change
+node_modules/filelist/node_modules/minimatch
+node_modules/minimatch
+  filelist  >=0.0.2
+  Depends on vulnerable versions of minimatch
+  node_modules/filelist
+    jake  >=10.6.1
+    Depends on vulnerable versions of filelist
+    node_modules/jake
+      ejs  3.1.2 - 4.0.1
+      Depends on vulnerable versions of jake
+      node_modules/ejs
+  glob  3.0.0 - 13.0.6
+  Depends on vulnerable versions of minimatch
+  node_modules/glob
+    @jest/reporters  *
+    Depends on vulnerable versions of @jest/transform
+    Depends on vulnerable versions of glob
+    node_modules/@jest/reporters
+    jest-runtime  >=24.0.0-alpha.0
+    Depends on vulnerable versions of @jest/globals
+    Depends on vulnerable versions of @jest/transform
+    Depends on vulnerable versions of glob
+    Depends on vulnerable versions of jest-snapshot
+    node_modules/jest-runtime
+      jest-circus  >=25.2.4
+      Depends on vulnerable versions of @jest/expect
+      Depends on vulnerable versions of jest-runtime
+      Depends on vulnerable versions of jest-snapshot
+      node_modules/jest-circus
+      jest-runner  >=24.0.0-alpha.0
+      Depends on vulnerable versions of @jest/transform
+      Depends on vulnerable versions of jest-runtime
+      node_modules/jest-runner
+    rimraf  2.3.0 - 3.0.2 || 4.2.0 - 6.1.3
+    Depends on vulnerable versions of glob
+    node_modules/rimraf
+      ts-node-dev  *
+      Depends on vulnerable versions of rimraf
+      node_modules/ts-node-dev
+    test-exclude  4.2.2 || >=5.0.0
+    Depends on vulnerable versions of glob
+    Depends on vulnerable versions of minimatch
+    node_modules/test-exclude
+      babel-plugin-istanbul  >=5.0.1
+      Depends on vulnerable versions of test-exclude
+      node_modules/babel-plugin-istanbul
+        @jest/transform  *
+        Depends on vulnerable versions of babel-plugin-istanbul
+        node_modules/@jest/transform
+          babel-jest  >=24.0.0-alpha.0
+          Depends on vulnerable versions of @jest/transform
+          Depends on vulnerable versions of babel-plugin-istanbul
+          node_modules/babel-jest
+          jest-snapshot  >=27.0.0-next.0
+          Depends on vulnerable versions of @jest/transform
+          node_modules/jest-snapshot
+            @jest/expect  *
+            Depends on vulnerable versions of jest-snapshot
+            node_modules/@jest/expect
+              @jest/globals  >=28.0.0-alpha.0
+              Depends on vulnerable versions of @jest/expect
+              node_modules/@jest/globals
+            jest-resolve-dependencies  >=27.0.0-next.0
+            Depends on vulnerable versions of jest-snapshot
+            node_modules/jest-resolve-dependencies
+
+path-to-regexp  <0.1.13
+Severity: high
+path-to-regexp vulnerable to Regular Expression Denial of Service via multiple route parameters - https://github.com/advisories/GHSA-37ch-88jc-xwx2
+fix available via `npm audit fix --force`
+Will install express@4.22.3, which is outside the stated dependency range
+node_modules/path-to-regexp
+
+qs  <=6.16.0
+Severity: moderate
+qs's arrayLimit bypass in comma parsing allows denial of service - https://github.com/advisories/GHSA-w7fw-mjwx-w883
+qs's arrayLimit bypass in its bracket notation allows DoS via memory exhaustion - https://github.com/advisories/GHSA-6rw7-vpxm-498p
+qs has a remotely triggerable DoS: qs.stringify crashes with TypeError on null/undefined entries in comma-format arrays when encodeValuesOnly is set - https://github.com/advisories/GHSA-q8mj-m7cp-5q26
+qs: Denial of Service via Attacker Controlled isBuffer - https://github.com/advisories/GHSA-4mjr-xmp4-gh2g
+qs : qs.stringify with arrayFormat 'comma' throws an uncaught TypeError on array elements carrying a non-callable own toString (DoS) - https://github.com/advisories/GHSA-6pq8-jhm2-2vcw
+fix available via `npm audit fix --force`
+Will install express@4.22.3, which is outside the stated dependency range
+node_modules/qs
+
+35 vulnerabilities (4 low, 23 moderate, 8 high)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues possible (including breaking changes), run:
+  npm audit fix --force
+
+Some issues need review, and may require choosing
+a different dependency.

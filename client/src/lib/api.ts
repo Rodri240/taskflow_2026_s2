@@ -45,15 +45,18 @@ export class ApiError extends Error {
 interface RequestOptions {
   method?: string;
   body?: unknown;
+  baseUrl?: string;
+  token?: string;
 }
 
 export async function api<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = {};
-  const token = getToken();
+  const token = options.token ?? getToken();
   if (token) headers.Authorization = `Bearer ${token}`;
   if (options.body !== undefined) headers['Content-Type'] = 'application/json';
 
-  const res = await fetch(`/api${path}`, {
+  const baseUrl = options.baseUrl?.replace(/\/$/, '') ?? '';
+  const res = await fetch(`${baseUrl}/api${path}`, {
     method: options.method ?? 'GET',
     headers,
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
