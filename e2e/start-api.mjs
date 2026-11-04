@@ -31,7 +31,12 @@ const environment = {
 const prepare = spawnSync(
   prismaExecutable,
   ['db', 'push'],
-  { cwd: serverDirectory, env: environment, stdio: 'inherit' },
+  {
+    cwd: serverDirectory,
+    env: environment,
+    stdio: 'inherit',
+    shell: process.platform === 'win32',
+  },
 );
 
 if (prepare.status !== 0) {
@@ -43,6 +48,7 @@ const api = spawn(npmExecutable, ['run', 'dev'], {
   cwd: serverDirectory,
   env: environment,
   stdio: 'inherit',
+  shell: process.platform === 'win32',
 });
 
 function stop(signal) {

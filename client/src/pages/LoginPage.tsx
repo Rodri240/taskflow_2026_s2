@@ -44,6 +44,7 @@ export default function LoginPage() {
             <span>Nombre</span>
             <input
               type="text"
+              id="login-name"
               data-testid="login-name-input"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -55,6 +56,7 @@ export default function LoginPage() {
           <span>Email</span>
           <input
             type="text"
+            id="login-email"
             data-testid="login-email-input"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -65,6 +67,7 @@ export default function LoginPage() {
           <span>Contraseña</span>
           <input
             type="password"
+            id="login-password"
             data-testid="login-password-input"
             value={password}
             onChange={(e) => setPassword(e.target.value)}

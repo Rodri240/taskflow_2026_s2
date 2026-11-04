@@ -56,6 +56,7 @@ export default function ProjectsPage() {
           <span>Nombre</span>
           <input
             type="text"
+            id="project-name"
             data-testid="project-name-input"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -65,6 +66,7 @@ export default function ProjectsPage() {
           <span>Descripción</span>
           <input
             type="text"
+            id="project-description"
             data-testid="project-description-input"
             value={description}
             onChange={(e) => setDescription(e.target.value)}

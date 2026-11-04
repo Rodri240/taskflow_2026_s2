@@ -224,6 +224,7 @@ export default function TaskDetailPage() {
           <span>Título</span>
           <input
             type="text"
+            id="task-title"
             data-testid="task-title-input"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -232,6 +233,7 @@ export default function TaskDetailPage() {
         <label className="field">
           <span>Descripción</span>
           <textarea
+            id="task-description"
             data-testid="task-description-input"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -240,6 +242,7 @@ export default function TaskDetailPage() {
         <label className="field">
           <span>Prioridad</span>
           <select
+            id="task-priority"
             data-testid="task-priority-select"
             value={priority}
             onChange={(e) => setPriority(e.target.value)}
@@ -254,6 +257,7 @@ export default function TaskDetailPage() {
         <label className="field">
           <span>Asignado</span>
           <select
+            id="task-assignee"
             data-testid="task-assignee-select"
             value={assigneeId}
             onChange={(e) => setAssigneeId(e.target.value)}
@@ -273,6 +277,7 @@ export default function TaskDetailPage() {
           <span>Vencimiento</span>
           <input
             type="date"
+            id="task-due-date"
             data-testid="task-duedate-input"
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
@@ -297,6 +302,7 @@ export default function TaskDetailPage() {
         <label className="field">
           <span>Estado</span>
           <select
+            id="task-status"
             data-testid="task-status-select"
             value={status}
             onChange={(e) => setStatus(e.target.value)}
@@ -332,12 +338,16 @@ export default function TaskDetailPage() {
           ))}
         </ul>
         <form className="form form-inline" data-testid="tag-add-form" onSubmit={onAddTag}>
-          <input
-            type="text"
-            data-testid="tag-add-input"
-            value={tagName}
-            onChange={(e) => setTagName(e.target.value)}
-          />
+          <label className="field">
+            <span>Nombre de etiqueta</span>
+            <input
+              type="text"
+              id="tag-name"
+              data-testid="tag-add-input"
+              value={tagName}
+              onChange={(e) => setTagName(e.target.value)}
+            />
+          </label>
           <button type="submit" data-testid="tag-add-button">
             Agregar etiqueta
           </button>
@@ -348,11 +358,15 @@ export default function TaskDetailPage() {
       <section className="section" data-testid="task-comments-section">
         <h2>Comentarios</h2>
         <form className="form" data-testid="comment-add-form" onSubmit={onAddComment}>
-          <textarea
-            data-testid="comment-add-input"
-            value={commentBody}
-            onChange={(e) => setCommentBody(e.target.value)}
-          />
+          <label className="field">
+            <span>Comentario</span>
+            <textarea
+              id="comment-body"
+              data-testid="comment-add-input"
+              value={commentBody}
+              onChange={(e) => setCommentBody(e.target.value)}
+            />
+          </label>
           <button type="submit" data-testid="comment-add-button" disabled={postingComment}>
             Comentar
           </button>
