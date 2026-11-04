@@ -20,6 +20,7 @@ const environment = {
   ...process.env,
   DATABASE_URL: `file:${databaseFile}`,
   JWT_SECRET: 'taskflow-playwright-secret',
+  NODE_ENV: 'test',
   PORT: '3000',
   TZ: 'America/Montevideo',
   // Prisma 6.19 puede fallar silenciosamente en macOS cuando RUST_LOG está en "warn".

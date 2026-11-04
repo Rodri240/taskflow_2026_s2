@@ -37,8 +37,9 @@
 | Severidad | HIGH |
 | CVSS | 8.1 (estimado) |
 | Ubicación | [server/src/modules/auth/auth.service.ts](../server/src/modules/auth/auth.service.ts), líneas 100-128 |
+| Estado | Corregido y verificado |
 
-**Descripción:** `resetPassword` valida que el token exista, pero no verifica `usedAt` ni lo marca como usado después de cambiar la contraseña. Por lo tanto, un token válido puede reutilizarse hasta su vencimiento.
+**Descripción:** En la revisión inicial, `resetPassword` validaba que el token existiera, pero no verificaba `usedAt` ni lo marcaba como usado después de cambiar la contraseña. Por lo tanto, un token válido podía reutilizarse hasta su vencimiento.
 
 **Pasos de reproducción:**
 
@@ -48,7 +49,7 @@
 
 **Impacto:** El poseedor de un token filtrado puede cambiar repetidamente la contraseña de la cuenta durante la ventana de validez. También contradice el criterio de aceptación de token de un solo uso cubierto por [e2e/auth.spec.ts](../e2e/auth.spec.ts).
 
-**Remediación propuesta:** Consultar con `where: { token, usedAt: null, expiresAt: { gt: new Date() } }` y actualizar `usedAt` dentro de una transacción junto con el cambio de contraseña. Mantener una prueba de primer uso exitoso y segundo uso rechazado.
+**Remediación aplicada:** Se validan `usedAt` y `expiresAt`, y el consumo de token y actualización de contraseña se realizan en una transacción. [e2e/auth.spec.ts](../e2e/auth.spec.ts) verifica primer uso exitoso y segundo uso rechazado.
 
 ### Hallazgo de Seguridad N.° 03
 
@@ -59,8 +60,9 @@
 | Severidad | MEDIUM |
 | CVSS | 6.5 (estimado) |
 | Ubicación | [server/src/modules/auth/auth.service.ts](../server/src/modules/auth/auth.service.ts), líneas 98-119 |
+| Estado | Corregido y verificado |
 
-**Descripción:** El endpoint de recuperación devuelve el token en la respuesta (`{ message, token }`) y responde `404 No account found for that email` cuando la cuenta no existe. Esto permite enumerar usuarios y hace que un token obtenido por un canal comprometido quede disponible directamente para el cliente.
+**Descripción:** En la revisión inicial, el endpoint devolvía el token en la respuesta (`{ message, token }`) y respondía `404 No account found for that email` cuando la cuenta no existía. Esto permitía enumerar usuarios y exponía el token directamente al cliente.
 
 **Pasos de reproducción:**
 
@@ -70,7 +72,7 @@
 
 **Impacto:** Facilita campañas dirigidas y permite confirmar qué cuentas existen. Si el token se expone en logs, historial del navegador o herramientas de monitoreo, puede utilizarse para tomar control de la cuenta.
 
-**Remediación propuesta:** Responder siempre `200` con un mensaje neutro, no devolver el token en producción y entregarlo exclusivamente mediante un canal de recuperación controlado. Para desarrollo, habilitar el token solo detrás de una configuración explícita.
+**Remediación aplicada:** El endpoint responde siempre `200` con un mensaje neutro y no devuelve el token fuera del entorno de pruebas. La prueba [e2e/auth.spec.ts](../e2e/auth.spec.ts) verifica que una cuenta existente y una inexistente no sean distinguibles.
 
 ## 4.2 Controles de seguridad verificados
 
@@ -80,6 +82,8 @@
 | Acceso de un usuario que no pertenece al proyecto | `403` o `404`, sin filtrar datos | La membresía se comprueba antes de continuar | [server/src/middleware/membership.ts](../server/src/middleware/membership.ts) |
 | Inyección SQL en login y búsqueda | No ejecutar SQL arbitrario | Prisma usa consultas parametrizadas; el payload no autentica ni altera datos | [server/src/modules/auth/auth.service.ts](../server/src/modules/auth/auth.service.ts) |
 | Bloqueo de cuenta | Bloquear al quinto intento fallido | Se registra `lockedUntil` por 15 minutos y se rechaza el login durante el bloqueo | [server/src/modules/auth/auth.service.ts](../server/src/modules/auth/auth.service.ts) |
+| Recuperación de contraseña | Un solo uso y sin enumeración | Primer reset en verde, segundo reset en `400`, respuestas neutras para emails desconocidos | [e2e/auth.spec.ts](../e2e/auth.spec.ts) |
+| Membresía vigente | Un exmiembro no opera sobre tareas | Responde `403`; al quitarlo, sus tareas quedan sin asignar | [e2e/members.spec.ts](../e2e/members.spec.ts) |
 
 ## 4.3 Hallazgos de accesibilidad
 
@@ -121,6 +125,23 @@
 - **Idioma:** [client/index.html](../client/index.html) declara `lang="es"`, consistente con el contenido.
 - **Mensajes de error:** [client/src/lib/ui.tsx](../client/src/lib/ui.tsx) usa `role="alert"` para anunciar errores de autenticación y formularios.
 
+### Hallazgo de Accesibilidad N.° 03
+
+| Campo | Detalle |
+|---|---|
+| ID | ACC-03 |
+| SC WCAG 2.1 | 2.4.7 Foco visible |
+| Nivel | AA |
+| Principio POUR | Operable |
+| Detección | Revisión manual con teclado |
+| Vista afectada | Login, Proyectos y Detalle de tarea |
+
+**Descripción del fallo:** Al recorrer los controles con `Tab`, el navegador no tenía un estilo de foco consistente definido por la aplicación. En fondos claros, la persona podía perder la posición actual del foco.
+
+**Fix aplicado:** Se agregó un indicador de foco visible con `:focus-visible` para enlaces, botones y campos en [client/src/styles.css](../client/src/styles.css).
+
+**Verificación:** Recorrer Login, Proyectos y Detalle de tarea con `Tab` muestra un contorno azul de 3 px sin eliminar el foco nativo.
+
 ## 4.4 User stories de remediación
 
 ### US-SEC-01 — Restringir orígenes CORS
@@ -152,3 +173,40 @@
 - axe no reporta la regla `label` en Login, Registro, Proyectos ni Detalle de tarea.
 - La auditoría `npx playwright test a11y --project=chromium` verifica la regla corregida en verde.
 - Los selectores `data-testid` de los flujos existentes permanecen sin cambios.
+
+## 4.5 Evidencias de ejecución
+
+| Verificación | Comando | Resultado |
+|---|---|---|
+| Suite API | `npm test` | 4 suites y 11 tests en verde |
+| Build frontend | `npm run build:client` | TypeScript y Vite en verde |
+| Auditoría axe | `npx playwright test a11y --project=chromium` | 4 vistas auditadas; la regla `label` queda verificada |
+| Autenticación/autorización | `npm run test:e2e -- auth.spec.ts members.spec.ts --project=chromium` | 6 tests en verde |
+| Dependencias raíz | `npm audit` | 9 vulnerabilidades: 3 moderate, 3 high, 3 critical |
+| Dependencias servidor | `npm --prefix server audit` | Evidencia guardada en [docs/evidencias/npm-audit-server.txt](./evidencias/npm-audit-server.txt) |
+| Dependencias cliente | `npm --prefix client audit` | Evidencia guardada en [docs/evidencias/npm-audit-client.txt](./evidencias/npm-audit-client.txt) |
+
+## 05 Checklist de entrega
+
+### Seguridad
+
+- [x] La app TaskFlow se levanta localmente y la API responde en `/api/health`.
+- [x] Se ejecutó `npm audit` desde la raíz y se documentaron vulnerabilidades HIGH/CRITICAL en las evidencias.
+- [x] Se inspeccionaron headers con `curl.exe -i` y se documentó la política CORS permisiva como SEC-01.
+- [x] Se probó el control de acceso con dos usuarios sobre proyectos y tareas; evidencia en [e2e/members.spec.ts](../e2e/members.spec.ts).
+- [x] Se probaron JWT manipulado, inyección SQL y payloads de texto; resultados en la tabla de controles verificados.
+- [x] Se documentaron hallazgos con ID, severidad, ubicación, impacto, reproducción, remediación y evidencia.
+- [x] Cada hallazgo tiene severidad y pasos de reproducción verificables.
+
+### Accesibilidad
+
+- [x] `@axe-core/playwright` está instalado desde la raíz y [e2e/a11y.spec.ts](../e2e/a11y.spec.ts) ejecuta la auditoría.
+- [x] La auditoría cubre Login, Registro, Proyectos y Detalle de tarea con `--project=chromium`.
+- [x] Se documentaron tres hallazgos mapeados a SC WCAG 2.1, incluyendo la revisión manual de foco.
+- [x] Se corrigieron nombres accesibles en formularios y foco visible en [client/src/](../client/src/); la verificación `label` queda en verde.
+
+### Reporte y User Stories
+
+- [x] Los hallazgos incluyen todos los campos de la plantilla y las evidencias apuntan a archivos reproducibles.
+- [x] Cada User Story incluye formato Como / quiero / para y al menos tres criterios de aceptación comprobables.
+- [x] El reporte queda versionado en este repositorio para su entrega en GitHub.

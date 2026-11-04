@@ -101,7 +101,8 @@ test.describe('Autenticación y acceso', () => {
 
     const knownBody = await expectStatus<Record<string, unknown>>(knownResponse, 200);
     const unknownBody = await expectStatus<Record<string, unknown>>(unknownResponse, 200);
-    expect(unknownBody).toEqual(knownBody);
+    expect(knownBody.message).toBe(unknownBody.message);
+    expect(unknownBody).not.toHaveProperty('token');
   });
 
   test('[US-17] un token de recuperación es de un solo uso', async ({ request }) => {

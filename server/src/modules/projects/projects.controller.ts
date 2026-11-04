@@ -184,7 +184,10 @@ export async function removeMember(req: Request, res: Response, next: NextFuncti
     });
     if (!membership) throw notFound('User is not a member of this project');
 
-    await db.projectMember.delete({ where: { id: membership.id } });
+    await db.$transaction([
+      db.projectMember.delete({ where: { id: membership.id } }),
+      db.task.updateMany({ where: { projectId: id, assigneeId: memberId }, data: { assigneeId: null } }),
+    ]);
     res.status(204).send();
   } catch (err) {
     next(err);

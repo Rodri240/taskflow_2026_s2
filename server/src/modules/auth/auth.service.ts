@@ -73,6 +73,7 @@ export async function login(body: Record<string, unknown>) {
       data.lockedUntil = new Date(Date.now() + 15 * 60 * 1000);
     }
     await db.user.update({ where: { id: user.id }, data });
+    if (attempts >= 5) throw unauthorized('Account temporarily locked. Try again later.');
     throw unauthorized('Invalid credentials');
   }
 
@@ -90,7 +91,8 @@ export async function forgotPassword(body: Record<string, unknown>) {
   const email = checkEmail(body.email);
 
   const user = await db.user.findUnique({ where: { email } });
-  if (!user) throw notFound('No account found for that email');
+  const message = 'If an account exists, a reset link will be sent.';
+  if (!user) return { message };
 
   await db.passwordResetToken.updateMany({
     where: { userId: user.id, usedAt: null },
@@ -106,24 +108,35 @@ export async function forgotPassword(body: Record<string, unknown>) {
     },
   });
 
-  // No hay servicio de email en el proyecto: el token se devuelve en la respuesta.
-  return { message: 'Password reset requested', token };
+  // El token solo se expone en el entorno de pruebas, donde no existe servicio de email.
+  return process.env.NODE_ENV === 'test' ? { message, token } : { message };
 }
 
 export async function resetPassword(body: Record<string, unknown>) {
   const token = typeof body.token === 'string' ? body.token : '';
   const newPassword = assertPassword(body.newPassword);
 
-  const record = await db.passwordResetToken.findUnique({ where: { token } });
+  const record = await db.passwordResetToken.findFirst({
+    where: { token, usedAt: null, expiresAt: { gt: new Date() } },
+  });
   if (!record) throw badRequest('Invalid or expired reset token');
 
-  await db.user.update({
-    where: { id: record.userId },
-    data: {
-      passwordHash: await bcrypt.hash(newPassword, 10),
-      failedAttempts: 0,
-      lockedUntil: null,
-    },
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+  await db.$transaction(async (transaction) => {
+    const consumed = await transaction.passwordResetToken.updateMany({
+      where: { id: record.id, usedAt: null, expiresAt: { gt: new Date() } },
+      data: { usedAt: new Date() },
+    });
+    if (consumed.count !== 1) throw badRequest('Invalid or expired reset token');
+
+    await transaction.user.update({
+      where: { id: record.userId },
+      data: {
+        passwordHash,
+        failedAttempts: 0,
+        lockedUntil: null,
+      },
+    });
   });
 
   return { message: 'Password updated' };
