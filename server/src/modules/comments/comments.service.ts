@@ -4,7 +4,15 @@ import * as repo from './comments.repository';
 
 const MAX_LENGTH = 1000;
 
-export function serialize(c: any) {
+interface CommentRecord {
+  id: number;
+  taskId: number;
+  authorId: number;
+  body: string;
+  createdAt: Date;
+}
+
+export function serialize(c: CommentRecord | null) {
   try {
     return {
       id: toPublicId('comment', c.id),
@@ -13,7 +21,7 @@ export function serialize(c: any) {
       body: c.body,
       createdAt: c.createdAt.toISOString(),
     };
-  } catch (e) {
+  } catch {
     return null;
   }
 }
@@ -23,7 +31,7 @@ export async function list(taskId: number) {
   return rows.map(serialize);
 }
 
-export async function create(taskId: number, authorId: number, body: any) {
+export async function create(taskId: number, authorId: number, body: { body?: unknown }) {
   const text = typeof body?.body === 'string' ? body.body.trim() : '';
   if (text.length < 1 || text.length > MAX_LENGTH) {
     throw badRequest(`Comment body must be between 1 and ${MAX_LENGTH} characters`);

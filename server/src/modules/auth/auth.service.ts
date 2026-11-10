@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { db } from '../../lib/db';
-import { badRequest, conflict, notFound, unauthorized } from '../../lib/http';
+import { badRequest, conflict, unauthorized } from '../../lib/http';
 import { toPublicId } from '../../lib/ids';
 import { assertPassword, normalizeEmail } from '../../lib/validation';
 import { signToken } from '../../middleware/auth';
