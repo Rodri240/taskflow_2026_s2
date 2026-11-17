@@ -12,6 +12,7 @@ describe('fechas de vencimiento (unit, TZ UTC-3)', () => {
     expect(parseDueDate('15/09/2026')).toBeUndefined();
     expect(parseDueDate('tomorrow')).toBeUndefined();
     expect(parseDueDate('2030-5-9')).toBeUndefined();
+    expect(parseDueDate('2030-02-30')).toBeUndefined();
   });
 
   it('parseDueDate distingue null (quitar fecha) de undefined (formato invÃ¡lido)', () => {
