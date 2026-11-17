@@ -35,14 +35,22 @@ export function parseDueDate(value: unknown): Date | null | undefined {
   if (typeof value !== 'string') return undefined;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined;
 
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? undefined : d;
+  const [year, month, day] = value.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    return undefined;
+  }
+  return date;
 }
 
 export function formatDueDate(value: Date | null): string | null {
   if (!value) return null;
-  const y = value.getFullYear();
-  const m = String(value.getMonth() + 1).padStart(2, '0');
-  const d = String(value.getDate()).padStart(2, '0');
+  const y = value.getUTCFullYear();
+  const m = String(value.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(value.getUTCDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
 }

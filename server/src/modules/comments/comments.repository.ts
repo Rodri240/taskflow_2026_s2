@@ -3,7 +3,7 @@ import { db } from '../../lib/db';
 export function listByTask(taskId: number) {
   return db.comment.findMany({
     where: { taskId },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: 'asc' },
   });
 }
 
