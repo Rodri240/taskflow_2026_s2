@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { expectStatus, registerUser, uniqueEmail, VALID_PASSWORD } from './support/api';
+import { expectStatus, registerUser, uniqueEmail, VALID_PASSWORD } from '../../support/api';
 
 test.describe('Autenticación y acceso', () => {
   test('[US-01, US-02] registra, normaliza el email y vuelve a iniciar sesión', async ({

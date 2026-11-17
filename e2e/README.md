@@ -1,6 +1,6 @@
 # Suite E2E de TaskFlow
 
-La suite usa Playwright sobre Chromium y una base SQLite temporal exclusiva que se crea para cada ejecución. No modifica `dev.db` ni depende del seed compartido.
+La suite usa Playwright sobre Chromium y una base SQLite temporal exclusiva que se crea y carga con datos conocidos en cada ejecución. No modifica `dev.db` ni depende del estado previo de una base compartida.
 
 ## Ejecución
 
@@ -34,6 +34,8 @@ Se automatizaron los recorridos de prioridad alta y los límites de seguridad o 
 | US-17 | privacidad y token de un solo uso | API |
 
 Los casos de contrato que no pueden generarse desde la UI se prueban con `APIRequestContext` de Playwright. Los recorridos visibles esperan la respuesta HTTP que causó cada cambio y luego verifican el estado renderizado; no usan pausas fijas. Los datos llevan identificadores únicos para impedir dependencias entre tests y los selectores se apoyan en los `data-testid` del producto.
+
+Todos los archivos de casos viven bajo `e2e/specs/`. La infraestructura reutilizable se separa en `actions/`, `components/`, `fixtures/`, `pages/` y `support/`; `specs/critical/` conserva los recorridos críticos originales y el resto usa las fixtures de dominio compartidas.
 
 ## Auditoría de accesibilidad
 

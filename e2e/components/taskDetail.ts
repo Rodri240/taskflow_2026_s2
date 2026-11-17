@@ -57,6 +57,15 @@ export class TaskDetail extends Component {
     return this.root.getByTestId('task-delete-button');
   }
 
+  private async save(): Promise<void> {
+    const response = this.page.waitForResponse(
+      (candidate) =>
+        candidate.request().method() === 'PATCH' && /\/api\/tasks\/task-\d+$/.test(candidate.url()),
+    );
+    await this.saveButton.click();
+    await response;
+  }
+
   // --- Estado ---
   get statusSelect(): Locator {
     return this.root.getByTestId('task-status-select');
@@ -111,12 +120,12 @@ export class TaskDetail extends Component {
       await this.assigneeSelect.selectOption({ label: fields.assignee });
     }
     if (fields.dueDate !== undefined) await this.dueDateInput.fill(fields.dueDate);
-    await this.saveButton.click();
+    await this.save();
   }
 
   async clearAssignee(): Promise<void> {
     await this.assigneeSelect.selectOption('');
-    await this.saveButton.click();
+    await this.save();
   }
 
   async changeStatus(status: string): Promise<void> {
