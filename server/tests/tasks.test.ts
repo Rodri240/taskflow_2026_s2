@@ -51,6 +51,37 @@ describe('Tareas', () => {
     expect(res.body.items.every((task: { status: string }) => task.status === 'TODO')).toBe(true);
   });
 
+  it('incluye asignado y cantidad de comentarios en el listado paginado', async () => {
+    const owner = await registerUser(`task-list-owner-${Date.now()}@test.com`);
+    const memberEmail = `task-list-member-${Date.now()}@test.com`;
+    const member = await registerUser(memberEmail);
+    const project = await createProject(owner.token, 'Proyecto listado enriquecido');
+    await request(app)
+      .post(`/api/projects/${project.id}/members`)
+      .set(auth(owner.token))
+      .send({ email: memberEmail });
+    const task = await createTask(owner.token, project.id, {
+      title: 'Tarea con actividad',
+      assigneeId: member.id,
+    });
+    for (const body of ['Primero', 'Segundo']) {
+      await request(app)
+        .post(`/api/tasks/${task.id}/comments`)
+        .set(auth(owner.token))
+        .send({ body });
+    }
+
+    const res = await request(app)
+      .get(`/api/projects/${project.id}/tasks`)
+      .set(auth(owner.token));
+
+    expect(res.status).toBe(200);
+    expect(res.body.items[0]).toMatchObject({
+      assignee: { id: member.id, email: memberEmail },
+      commentCount: 2,
+    });
+  });
+
   it('obtiene una tarea por id', async () => {
     const { token } = await registerUser('task4@test.com');
     const project = await createProject(token, 'Proyecto get');
