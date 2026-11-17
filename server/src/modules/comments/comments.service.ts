@@ -13,6 +13,7 @@ interface CommentRecord {
 }
 
 export function serialize(c: CommentRecord | null) {
+  if (!c) return null;
   try {
     return {
       id: toPublicId('comment', c.id),

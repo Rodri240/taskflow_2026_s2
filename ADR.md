@@ -19,9 +19,13 @@
 
 - **POM clásico: descartado**  — con componentes compartidos, las clases de página completa duplican selectores y mezclan responsabilidades.
 
-- **Screenplay: descartado por ahora**  — costo alto, aplicacion relativamente pequeña. No vale la pena todo el trabajo de seteo 
+- **Screenplay: descartado por ahora**  — costo alto, aplicacion relativamente pequeña. No vale la pena todo el trabajo de seteo
 
 ## Parte 3 — Propuesta de cambio 
 
- **Adoptar tests E2E, usando Component Object Model + App Actions/Fixtures.** 
+ **Adoptar tests E2E, usando Component Object Model + App Actions/Fixtures.**
 
+
+
+
+Hola esto es un test

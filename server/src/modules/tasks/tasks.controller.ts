@@ -17,17 +17,22 @@ export async function listByProject(req: Request, res: Response, next: NextFunct
       ? parsePublicId(String(req.query.assignedTo), 'user') ?? undefined
       : undefined;
 
+    const limit = Math.min(Number(req.query.limit) || DEFAULT_LIMIT, MAX_LIMIT);
+    const offset = Number(req.query.offset) || 0;
+
     const filters: repo.TaskFilters = {
       status: req.query.status ? String(req.query.status) : undefined,
       priority: req.query.priority ? String(req.query.priority) : undefined,
       assigneeId: assignedTo,
       search: req.query.search ? String(req.query.search) : undefined,
+      limit,
+      offset,
     };
 
-    const limit = Math.min(Number(req.query.limit) || DEFAULT_LIMIT, MAX_LIMIT);
-    const offset = Number(req.query.offset) || 0;
-
-    const rows = await repo.findTasks(projectId, filters);
+    const [rows, total] = await Promise.all([
+      repo.findTasks(projectId, filters),
+      repo.countTasks(projectId, filters),
+    ]);
 
     const items = [];
     for (const row of rows) {
@@ -43,7 +48,7 @@ export async function listByProject(req: Request, res: Response, next: NextFunct
       );
     }
 
-    res.json({ items, total: rows.length, limit, offset });
+    res.json({ items, total, limit, offset });
   } catch (err) {
     next(err);
   }
