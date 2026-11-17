@@ -28,6 +28,15 @@ test.describe('Detalle de tarea', () => {
     await expect(app.taskDetail.detail.prioritySelect).toHaveValue('CRITICAL');
   });
 
+  test('rechaza editar una tarea con título vacío (US-12)', async ({ api, session }) => {
+    const auth = await session(USERS.ana);
+    const { task } = await setupTask(api, auth);
+
+    const response = await api.rawPatch(`/tasks/${task.id}`, { title: '' }, auth.token);
+
+    expect(response.status()).toBe(400);
+  });
+
   test('asigna la tarea a un miembro y luego la desasigna', async ({ page, api, session }) => {
     const auth = await session(USERS.ana);
     const project = await api.createProject(auth.token, { name: uniqueName('Asignar') });
@@ -52,6 +61,23 @@ test.describe('Detalle de tarea', () => {
     );
   });
 
+  test('rechaza asignar la tarea a un usuario que no es miembro (US-14)', async ({
+    api,
+    session,
+  }) => {
+    const auth = await session(USERS.ana);
+    const outsider = await api.login(USERS.caro.email, USERS.caro.password);
+    const { task } = await setupTask(api, auth);
+
+    const response = await api.rawPatch(
+      `/tasks/${task.id}`,
+      { assigneeId: outsider.user.id },
+      auth.token,
+    );
+
+    expect(response.status()).toBe(400);
+  });
+
   // BUG-18: el server parsea la fecha como medianoche UTC y la formatea con
   // la zona horaria local; en UTC-3 '2030-05-19' se devuelve '2030-05-18'.
   // US-16 CA3 exige que la fecha devuelta sea siempre la misma que se cargó.
@@ -64,6 +90,19 @@ test.describe('Detalle de tarea', () => {
     await app.taskDetail.detail.edit({ dueDate: '2030-05-19' });
 
     await expect(app.taskDetail.detail.dueDateValue).toHaveText('2030-05-19');
+  });
+
+  test('rechaza una fecha de vencimiento inválida (US-16)', async ({ api, session }) => {
+    const auth = await session(USERS.ana);
+    const { task } = await setupTask(api, auth);
+
+    const response = await api.rawPatch(
+      `/tasks/${task.id}`,
+      { dueDate: '2030-02-30' },
+      auth.token,
+    );
+
+    expect(response.status()).toBe(400);
   });
 
   test('registra el historial al cambiar de estado', async ({ page, api, session }) => {

@@ -6,7 +6,7 @@ import {
   createTask,
   registerUser,
   uniqueValue,
-} from './support/api';
+} from '../../support/api';
 
 const VERIFICAR: { regla: string | null; vistas: string[] } = {
   regla: 'label',

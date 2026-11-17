@@ -7,7 +7,7 @@ import {
   createTask,
   expectStatus,
   registerUser,
-} from './support/api';
+} from '../../support/api';
 
 test.describe('Miembros y autorización', () => {
   test('[US-11] el owner agrega y quita un miembro; sus tareas quedan sin asignar', async ({

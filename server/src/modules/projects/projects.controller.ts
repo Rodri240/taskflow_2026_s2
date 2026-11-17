@@ -56,7 +56,7 @@ export async function list(req: Request, res: Response, next: NextFunction): Pro
       where: {
         OR: [
           { ownerId: userId, archived: false },
-          { members: { some: { userId } }, ownerId: { not: userId } },
+          { members: { some: { userId } }, ownerId: { not: userId }, archived: false },
         ],
       },
       orderBy: { createdAt: 'asc' },

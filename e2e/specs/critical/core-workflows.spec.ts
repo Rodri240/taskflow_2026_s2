@@ -7,7 +7,7 @@ import {
   expectStatus,
   registerUser,
   uniqueValue,
-} from './support/api';
+} from '../../support/api';
 
 test.describe('Flujos principales de proyectos y tareas', () => {
   test('[US-03, US-04] crea un proyecto y lo muestra con sus datos exactos', async ({

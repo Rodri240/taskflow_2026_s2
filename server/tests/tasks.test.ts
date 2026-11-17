@@ -30,16 +30,56 @@ describe('Tareas', () => {
   });
 
   it('filtra las tareas por estado', async () => {
-    const { token } = await registerUser('task3@test.com');
+    const { token, id } = await registerUser('task3@test.com');
     const project = await createProject(token, 'Proyecto de filtros');
     await createTask(token, project.id, { title: 'Primera tarea' });
-    await createTask(token, project.id, { title: 'Segunda tarea' });
+    const moved = await createTask(token, project.id, {
+      title: 'Segunda tarea',
+      assigneeId: id,
+    });
+    await request(app)
+      .patch(`/api/tasks/${moved.id}`)
+      .set(auth(token))
+      .send({ status: 'IN_PROGRESS' });
 
     const res = await request(app)
       .get(`/api/projects/${project.id}/tasks?status=TODO`)
       .set(auth(token));
 
-    expect(res.body.items).toHaveLength(2);
+    expect(res.status).toBe(200);
+    expect(res.body.items).toHaveLength(1);
+    expect(res.body.items.every((task: { status: string }) => task.status === 'TODO')).toBe(true);
+  });
+
+  it('incluye asignado y cantidad de comentarios en el listado paginado', async () => {
+    const owner = await registerUser(`task-list-owner-${Date.now()}@test.com`);
+    const memberEmail = `task-list-member-${Date.now()}@test.com`;
+    const member = await registerUser(memberEmail);
+    const project = await createProject(owner.token, 'Proyecto listado enriquecido');
+    await request(app)
+      .post(`/api/projects/${project.id}/members`)
+      .set(auth(owner.token))
+      .send({ email: memberEmail });
+    const task = await createTask(owner.token, project.id, {
+      title: 'Tarea con actividad',
+      assigneeId: member.id,
+    });
+    for (const body of ['Primero', 'Segundo']) {
+      await request(app)
+        .post(`/api/tasks/${task.id}/comments`)
+        .set(auth(owner.token))
+        .send({ body });
+    }
+
+    const res = await request(app)
+      .get(`/api/projects/${project.id}/tasks`)
+      .set(auth(owner.token));
+
+    expect(res.status).toBe(200);
+    expect(res.body.items[0]).toMatchObject({
+      assignee: { id: member.id, email: memberEmail },
+      commentCount: 2,
+    });
   });
 
   it('obtiene una tarea por id', async () => {
@@ -96,10 +136,21 @@ describe('Tareas', () => {
       description: 'Descripción',
       priority: 'CRITICAL',
       assigneeId: assignee.id,
-      // Tolera BUG-18 (desfase horario): la fecha exacta se verifica en
-      // unit-dates.test.ts con una zona horaria fija.
-      dueDate: expect.stringMatching(/^2030-05-/),
+      dueDate: '2030-05-19',
     });
+  });
+
+  it('ignora el estado enviado al crear y siempre inicia en TODO (US-05 CA3)', async () => {
+    const { token } = await registerUser(`task-status-${Date.now()}@test.com`);
+    const project = await createProject(token, 'Proyecto estado inicial');
+
+    const res = await request(app)
+      .post(`/api/projects/${project.id}/tasks`)
+      .set(auth(token))
+      .send({ title: 'Tarea estado protegido', status: 'DONE' });
+
+    expect(res.status).toBe(201);
+    expect(res.body.status).toBe('TODO');
   });
 
   it.each([
@@ -248,6 +299,28 @@ describe('Tareas', () => {
     expect(added.body.name).toBe('frontend');
     expect(fetched.body.tags).toEqual([{ id: added.body.id, name: 'frontend' }]);
     expect(removed.status).toBe(204);
+  });
+
+  it('normaliza etiquetas y no duplica la misma etiqueta (US-15 CA1/CA2)', async () => {
+    const { token } = await registerUser(`task-tags-${Date.now()}@test.com`);
+    const project = await createProject(token, 'Proyecto etiquetas idempotentes');
+    const task = await createTask(token, project.id, { title: 'Tarea sin duplicados' });
+
+    const first = await request(app)
+      .post(`/api/tasks/${task.id}/tags`)
+      .set(auth(token))
+      .send({ name: ' BUG ' });
+    const repeated = await request(app)
+      .post(`/api/tasks/${task.id}/tags`)
+      .set(auth(token))
+      .send({ name: 'bug' });
+    const fetched = await request(app).get(`/api/tasks/${task.id}`).set(auth(token));
+
+    expect(first.status).toBe(201);
+    expect(first.body.name).toBe('bug');
+    expect(repeated.status).toBe(200);
+    expect(repeated.body.id).toBe(first.body.id);
+    expect(fetched.body.tags).toEqual([{ id: first.body.id, name: 'bug' }]);
   });
 
   it('rejects invalid and excessive tags', async () => {

@@ -34,19 +34,14 @@ export async function listByProject(req: Request, res: Response, next: NextFunct
       repo.countTasks(projectId, filters),
     ]);
 
-    const items = [];
-    for (const row of rows) {
-      const assignee = row.assigneeId
-        ? await db.user.findUnique({ where: { id: row.assigneeId } })
-        : null;
-      const commentCount = await db.comment.count({ where: { taskId: row.id } });
-      items.push(
-        service.serializeTask(row as service.TaskRow, {
-          assignee: assignee ? { id: toPublicId('user', assignee.id), email: assignee.email } : null,
-          commentCount,
-        }),
-      );
-    }
+    const items = rows.map((row) =>
+      service.serializeTask(row as service.TaskRow, {
+        assignee: row.assignee
+          ? { id: toPublicId('user', row.assignee.id), email: row.assignee.email }
+          : null,
+        commentCount: row._count.comments,
+      }),
+    );
 
     res.json({ items, total, limit, offset });
   } catch (err) {
@@ -101,7 +96,8 @@ export async function addTag(req: Request, res: Response, next: NextFunction): P
   try {
     const taskId = parsePublicId(req.params.taskId, 'task');
     if (taskId === null) throw notFound('Task not found');
-    res.status(201).json(await service.addTag(taskId, req.body?.name));
+    const result = await service.addTag(taskId, req.body?.name);
+    res.status(result.created ? 201 : 200).json(result.tag);
   } catch (err) {
     next(err);
   }

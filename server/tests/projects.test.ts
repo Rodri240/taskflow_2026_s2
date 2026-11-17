@@ -1,4 +1,6 @@
 import request from 'supertest';
+import { db } from '../src/lib/db';
+import { parsePublicId } from '../src/lib/ids';
 import { app, auth, createProject, registerUser } from './helpers';
 
 describe('Proyectos', () => {
@@ -77,6 +79,26 @@ describe('Proyectos', () => {
     expect(res.body.length).toBeGreaterThan(0);
   });
 
+  it('no lista proyectos archivados aunque el usuario sea miembro (US-04 CA2)', async () => {
+    const owner = await registerUser('owner-archived@test.com');
+    const member = await registerUser('member-archived@test.com');
+    const project = await createProject(owner.token, 'Proyecto archivado compartido');
+
+    await request(app)
+      .post(`/api/projects/${project.id}/members`)
+      .set(auth(owner.token))
+      .send({ email: 'member-archived@test.com' });
+    await db.project.update({
+      where: { id: parsePublicId(project.id, 'proj')! },
+      data: { archived: true },
+    });
+
+    const res = await request(app).get('/api/projects').set(auth(member.token));
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([]);
+  });
+
   it('rechaza crear un proyecto sin autenticación', async () => {
     const res = await request(app).post('/api/projects').send({ name: 'Sin token' });
 
@@ -121,7 +143,7 @@ describe('Proyectos', () => {
   it('rechaza actualizar si no es dueño (es miembro)', async () => {
     const owner = await registerUser('ownerm@test.com');
     const member = await registerUser('memberm@test.com');
-    const proj = await createProject(owner.token, 'P');
+    const proj = await createProject(owner.token, 'Proyecto miembro');
 
     await request(app)
       .post(`/api/projects/${proj.id}/members`)
@@ -227,7 +249,7 @@ describe('Proyectos', () => {
   it('rechaza eliminar si no es dueño', async () => {
     const owner = await registerUser('delowner@test.com');
     const other = await registerUser('delother@test.com');
-    const proj = await createProject(owner.token, 'P');
+    const proj = await createProject(owner.token, 'Proyecto eliminar ajeno');
 
     const res = await request(app).delete(`/api/projects/${proj.id}`).set(auth(other.token));
 
@@ -237,7 +259,7 @@ describe('Proyectos', () => {
   it('rechaza eliminar si es miembro pero no dueño', async () => {
     const owner = await registerUser('delownerm@test.com');
     const member = await registerUser('delmember@test.com');
-    const proj = await createProject(owner.token, 'P');
+    const proj = await createProject(owner.token, 'Proyecto eliminar miembro');
 
     await request(app)
       .post(`/api/projects/${proj.id}/members`)
@@ -252,7 +274,7 @@ describe('Proyectos', () => {
   it('agrega un miembro', async () => {
     const owner = await registerUser('addowner@test.com');
     const member = await registerUser('addmember@test.com');
-    const proj = await createProject(owner.token, 'P');
+    const proj = await createProject(owner.token, 'Proyecto agregar miembro');
 
     const res = await request(app)
       .post(`/api/projects/${proj.id}/members`)
@@ -277,7 +299,7 @@ describe('Proyectos', () => {
   it('rechaza agregar miembro si no es dueño', async () => {
     const owner = await registerUser('addnoowner@test.com');
     const other = await registerUser('addnoowner2@test.com');
-    const proj = await createProject(owner.token, 'P');
+    const proj = await createProject(owner.token, 'Proyecto sin permiso');
 
     const res = await request(app)
       .post(`/api/projects/${proj.id}/members`)
@@ -289,7 +311,7 @@ describe('Proyectos', () => {
 
   it('rechaza agregar miembro con email inválido', async () => {
     const owner = await registerUser('bademail@test.com');
-    const proj = await createProject(owner.token, 'P');
+    const proj = await createProject(owner.token, 'Proyecto email invalido');
 
     const res = await request(app)
       .post(`/api/projects/${proj.id}/members`)
@@ -301,7 +323,7 @@ describe('Proyectos', () => {
 
   it('rechaza agregar miembro si usuario no existe', async () => {
     const owner = await registerUser('nouser@test.com');
-    const proj = await createProject(owner.token, 'P');
+    const proj = await createProject(owner.token, 'Proyecto usuario inexistente');
 
     const res = await request(app)
       .post(`/api/projects/${proj.id}/members`)
@@ -314,7 +336,7 @@ describe('Proyectos', () => {
   it('rechaza agregar miembro ya existente', async () => {
     const owner = await registerUser('existowner@test.com');
     const member = await registerUser('existmember@test.com');
-    const proj = await createProject(owner.token, 'P');
+    const proj = await createProject(owner.token, 'Proyecto miembro existente');
 
     await request(app)
       .post(`/api/projects/${proj.id}/members`)
@@ -343,7 +365,7 @@ describe('Proyectos', () => {
   it('elimina un miembro', async () => {
     const owner = await registerUser('remowner@test.com');
     const member = await registerUser('remmember@test.com');
-    const proj = await createProject(owner.token, 'P');
+    const proj = await createProject(owner.token, 'Proyecto remover miembro');
 
     await request(app)
       .post(`/api/projects/${proj.id}/members`)
@@ -382,7 +404,7 @@ describe('Proyectos', () => {
     const owner = await registerUser('remnoowner@test.com');
     const member = await registerUser('remnoownerm@test.com');
     const other = await registerUser('remnoowner2@test.com');
-    const proj = await createProject(owner.token, 'P');
+    const proj = await createProject(owner.token, 'Proyecto remover sin permiso');
 
     await request(app)
       .post(`/api/projects/${proj.id}/members`)
@@ -398,7 +420,7 @@ describe('Proyectos', () => {
 
   it('rechaza eliminar al dueño del proyecto', async () => {
     const owner = await registerUser('remownerbad@test.com');
-    const proj = await createProject(owner.token, 'P');
+    const proj = await createProject(owner.token, 'Proyecto conservar owner');
 
     const res = await request(app)
       .delete(`/api/projects/${proj.id}/members/${owner.id}`)
@@ -410,7 +432,7 @@ describe('Proyectos', () => {
   it('rechaza eliminar miembro que no existe', async () => {
     const owner = await registerUser('remnomem@test.com');
     const nomem = await registerUser('remnomem2@test.com');
-    const proj = await createProject(owner.token, 'P');
+    const proj = await createProject(owner.token, 'Proyecto miembro ausente');
 
     const res = await request(app)
       .delete(`/api/projects/${proj.id}/members/${nomem.id}`)

@@ -1,4 +1,5 @@
 import request from 'supertest';
+import { createApp } from '../src/app';
 import { app, auth, createProject, createTask, registerUser } from './helpers';
 
 describe('Infraestructura HTTP', () => {
@@ -28,6 +29,39 @@ describe('Infraestructura HTTP', () => {
     expect(res.body.error.code).toBe('INTERNAL');
 
     consoleError.mockRestore();
+  });
+
+  describe('CORS', () => {
+    const originalOrigins = process.env.CORS_ALLOWED_ORIGINS;
+
+    afterEach(() => {
+      if (originalOrigins === undefined) delete process.env.CORS_ALLOWED_ORIGINS;
+      else process.env.CORS_ALLOWED_ORIGINS = originalOrigins;
+    });
+
+    it('expone headers CORS para el origen configurado', async () => {
+      process.env.CORS_ALLOWED_ORIGINS = 'https://taskflow.example';
+      const corsApp = createApp();
+
+      const res = await request(corsApp)
+        .get('/api/health')
+        .set('Origin', 'https://taskflow.example');
+
+      expect(res.status).toBe(200);
+      expect(res.headers['access-control-allow-origin']).toBe('https://taskflow.example');
+    });
+
+    it('no expone headers CORS para un origen no autorizado', async () => {
+      process.env.CORS_ALLOWED_ORIGINS = 'https://taskflow.example';
+      const corsApp = createApp();
+
+      const res = await request(corsApp)
+        .get('/api/health')
+        .set('Origin', 'https://evil.example');
+
+      expect(res.status).toBe(200);
+      expect(res.headers).not.toHaveProperty('access-control-allow-origin');
+    });
   });
 
   describe('autenticación', () => {

@@ -11,7 +11,7 @@ export default function globalSetup(): void {
 
   execSync('npx prisma db push --skip-generate --accept-data-loss', {
     cwd: path.join(__dirname, '..'),
-    env: { ...process.env, DATABASE_URL: `file:${TEMPLATE_DB}` },
+    env: { ...process.env, DATABASE_URL: `file:${TEMPLATE_DB}`, RUST_LOG: 'info' },
     stdio: 'ignore',
   });
 }

@@ -62,14 +62,14 @@ export async function createTask(projectId: number, userId: number, body: Record
 
   const task = await db.task.create({
     data: {
-      ...(body as object),
       projectId,
       title,
       description: description ?? null,
+      status: 'TODO',
       priority,
       assigneeId,
       dueDate: dueDate ?? null,
-    } as never,
+    },
   });
 
   await db.taskHistory.create({
@@ -193,19 +193,32 @@ export async function addTag(taskId: number, rawName: unknown) {
   if (typeof rawName !== 'string' || rawName.trim().length < 1 || rawName.trim().length > 30) {
     throw badRequest('Tag name must be between 1 and 30 characters');
   }
-  const name = rawName.trim();
+  const name = rawName.trim().toLowerCase();
+
+  let tag = await db.tag.findFirst({ where: { name } });
+  if (tag) {
+    const existing = await db.taskTag.findFirst({ where: { taskId, tagId: tag.id } });
+    if (existing) {
+      return {
+        tag: { id: toPublicId('tag', tag.id), name: tag.name },
+        created: false,
+      };
+    }
+  }
 
   const current = await db.taskTag.count({ where: { taskId } });
   if (current >= MAX_TAGS_PER_TASK) {
     throw badRequest(`A task can have at most ${MAX_TAGS_PER_TASK} tags`);
   }
 
-  let tag = await db.tag.findFirst({ where: { name } });
   if (!tag) tag = await db.tag.create({ data: { name } });
 
   await db.taskTag.create({ data: { taskId, tagId: tag.id } });
 
-  return { id: toPublicId('tag', tag.id), name: tag.name };
+  return {
+    tag: { id: toPublicId('tag', tag.id), name: tag.name },
+    created: true,
+  };
 }
 
 export async function removeTag(taskId: number, tagId: number): Promise<void> {

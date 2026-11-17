@@ -45,6 +45,18 @@ if (prepare.status !== 0) {
   process.exit(prepare.status ?? 1);
 }
 
+const seed = spawnSync(npmExecutable, ['run', 'db:seed'], {
+  cwd: serverDirectory,
+  env: environment,
+  stdio: 'inherit',
+  shell: process.platform === 'win32',
+});
+
+if (seed.status !== 0) {
+  rmSync(databaseDirectory, { recursive: true, force: true });
+  process.exit(seed.status ?? 1);
+}
+
 const api = spawn(npmExecutable, ['run', 'dev'], {
   cwd: serverDirectory,
   env: environment,

@@ -45,6 +45,10 @@ export async function findTasks(projectId: number, f: TaskFilters) {
     orderBy: { id: 'asc' },
     take: f.limit,
     skip: f.offset,
+    include: {
+      assignee: true,
+      _count: { select: { comments: true } },
+    },
   });
 }
 
